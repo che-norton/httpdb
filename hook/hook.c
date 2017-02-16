@@ -12,6 +12,8 @@
 typedef int (*LISTEN)(int sockfd, int backlog);
 typedef int (*BIND)(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 typedef char* (*NVRAM_GET)(char* in);
+typedef int (*MTD_ERASE)(const char * in);
+typedef int (*MOUNT)(const char *, const char *, const char *, int, int);
 
 static void* get_libc_handle() {
     static void *handle = NULL;
@@ -26,6 +28,15 @@ static void* get_nvram_handle() {
     static void *handle = NULL;
     if(!handle) {
         handle = dlopen("libnvram.so", RTLD_LAZY);
+    }
+
+    return handle;
+}
+
+static void* get_acos_handle() {
+    static void *handle = NULL;
+    if(!handle) {
+        handle = dlopen("libacos_shared.so", RTLD_LAZY);
     }
 
     return handle;
@@ -120,6 +131,75 @@ int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
         }
     }
 
-    printf("hack bind function invoked. port=%d addr=0x%02x addrlen=%d\n", htons(in_addr->sin_port), in_addr->sin_addr.s_addr, addrlen);
+    //printf("hack bind function invoked. port=%d addr=0x%02x addrlen=%d\n", htons(in_addr->sin_port), in_addr->sin_addr.s_addr, addrlen);
     return old_handle(sockfd, (const struct sockaddr*)in_addr, addrlen);
 }
+
+static int _strcmp(const char *s1,  const char *s2) {
+    uint8_t *p1 = (uint8_t*)s1;
+    uint8_t *p2 = (uint8_t*)s2;
+
+    if(NULL == s1 || NULL == s2) {
+        return -2;
+    }
+
+    while(*p1 != '\0') {
+        if(*p2 == '\0') {
+            return 1;
+        }
+        if(*p2 > *p1) {
+            return -1;
+        }
+        if(*p1 > *p2) {
+            return 1;
+        }
+
+        p1++;
+        p2++;
+    }
+
+    if(*p2 != '\0') {
+        return -1;
+    }
+
+    return 0;
+}
+
+int mtd_erase(const char * in) {
+    static MTD_ERASE old_handle = NULL;
+    void* handle = get_acos_handle();
+    if(!old_handle) {
+        old_handle = (MTD_ERASE)dlsym(handle, "mtd_erase");
+    }
+
+    if(0 == _strcmp(in, "brcmnand")) {
+        //Ignore erase brcmnand
+        return 0;
+    }
+
+    //printf("mtd_erase called, in=%s\n", in);
+    return old_handle(in);
+}
+
+int mount(const char *dpath, const char *spath, const char *t, int a1, int a2) {
+    static MOUNT old_handle = NULL;
+    static is_mount = 0;
+    void* handle = get_libc_handle();
+
+    if(!old_handle) {
+        old_handle = (MOUNT)dlsym(handle, "mount");
+    }
+
+    if(0 == _strcmp(spath, "/tmp/media/nand")) {
+        if(is_mount) {
+            //ignore it. mount already
+            return 0;
+        }
+
+        is_mount = 1;
+    }
+
+    //printf("mount called %s %s %s\n", dpath, spath, t); 
+    return old_handle(dpath, spath, t, a1, a2);
+}
+
