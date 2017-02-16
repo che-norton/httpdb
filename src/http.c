@@ -672,7 +672,7 @@ static int process_json(struct conn_data* conn, struct http_message *hm) {
     int i, n, ok, dst_len = DST_LEN-9;
     struct json_token tokens[200] = {{0}};
     char *buf, dst[DST_LEN+50];
-    struct json_token *method, *params, *fields;
+    struct json_token *method = NULL, *params, *fields;
     struct mg_connection *nc = conn->client.nc;
     dbclient client;
 
@@ -706,7 +706,7 @@ static int process_json(struct conn_data* conn, struct http_message *hm) {
         buf = dst;
         ok = 1;
         if(method != NULL && JSON_TYPE_STRING == method[0].type && dst_len > method[0].len) {
-            n = sprintf(buf, "%s/%s", "/koolshare/scripts", method[0].ptr);
+            n = sprintf(buf, "%s/%s", "/jffs/koolshare/scripts", method[0].ptr);
             buf[n] = '\0';
             if(-1 == access(buf, X_OK)) {
                 ok = 0;
