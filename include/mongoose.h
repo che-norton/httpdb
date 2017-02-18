@@ -2096,6 +2096,9 @@ extern "C" {
 #define MG_ENV_EXPORT_TO_CGI "MONGOOSE_CGI"
 #endif
 
+//By janson, enable upload
+#define MG_ENABLE_HTTP_STREAMING_MULTIPART
+
 /* HTTP message */
 struct http_message {
   struct mg_str message; /* Whole message: request line + headers + body */

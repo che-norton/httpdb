@@ -881,6 +881,16 @@ static int check_path_exists(const char *url, int len) {
     return 0;
 }
 
+static struct mg_str upload_cb(struct mg_connection *c, struct mg_str file_name) {
+    struct mg_str new_file = {0};
+    char *path = malloc(256);
+    size_t n = sprintf(path, "%s/%s", s_http_tmp_opts.document_root, file_name.p);
+    new_file.len = n;
+    new_file.p = path;
+    //printf("filename=%.*s\n", (int)new_file.len, new_file.p);
+    return new_file;
+}
+
 static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int https) {
     struct conn_data *conn = (struct conn_data *) nc->user_data;
     const time_t now = time(NULL);
@@ -1043,6 +1053,12 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
                 break;
             }
 
+        case MG_EV_HTTP_PART_BEGIN:
+        case MG_EV_HTTP_PART_DATA:
+        case MG_EV_HTTP_PART_END:
+            mg_file_upload_handler(nc, ev, ev_data, upload_cb);
+            break;
+
         case MG_EV_POLL:
             {
                 assert(conn != NULL);
@@ -1137,7 +1153,7 @@ int main(int argc, char *argv[]) {
     //s_http_server_opts.enable_directory_listing = "no";
     //s_http_server_opts.url_rewrites = "/_root=/web_root";
 
-    s_http_tmp_opts.document_root = "/tmp/info";
+    s_http_tmp_opts.document_root = "/tmp/upload";
     s_http_tmp_opts.enable_directory_listing = "no";
 
     http_port[0] = '\0';
@@ -1248,7 +1264,7 @@ int main(int argc, char *argv[]) {
     signal(SIGTERM, signal_handler);
 
     /* Run event loop until signal is received */
-    printf("Starting http on port %s\nhttps on port %s www=%s\n", http_port, https_port, www);
+    printf("Starting http on port %s\nhttps on port %s \nwww=%s\n upload path=/tmp/upload\n", http_port, https_port, www);
     while (s_sig_num == 0) {
         mg_mgr_poll(&mgr, 1000);
     }
