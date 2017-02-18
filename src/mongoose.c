@@ -4311,7 +4311,7 @@ static const struct {
   const char *mime_type;
 } mg_static_builtin_mime_types[] = {
     MIME_ENTRY("html", "text/html"),
-    MIME_ENTRY("html", "text/html"),
+    MIME_ENTRY("asp", "text/html"),
     MIME_ENTRY("htm", "text/html"),
     MIME_ENTRY("shtm", "text/html"),
     MIME_ENTRY("shtml", "text/html"),
