@@ -33,5 +33,7 @@
 *.su
 
 build
+build-x86
 cscope.*
 tags
+

@@ -23,6 +23,8 @@
 #define PREFIX_RESULT "/_result/"
 #define PREFIX_RESULT_LEN (9)
 
+#define DEBUG
+
 // 106.186.20.48
 // gcc -o http ../../mongoose.c  http.c
 // curl -X POST -d '{"id":3434343, "method":"echo", "params":[33,44],"fields":{"hello":"cc","hd":"oooo","hf":"nnn"}}' http://127.0.0.1:8000/_api/
@@ -540,6 +542,11 @@ static int connect_backend(struct conn_data *conn, struct http_message *hm) {
 
 static int is_keep_alive(struct http_message *hm) {
     const struct mg_str *connection_header = mg_get_http_header(hm, "Connection");
+    /* if(connection_header != NULL) {
+        fprintf(stderr, "conneciton_header=%.*s\n", connection_header->len, connection_header->p);
+    } else {
+        fprintf(stderr, "connection is null\n");
+    } */
     if (connection_header == NULL) {
         /* HTTP/1.1 connections are keep-alive by default. */
         if (mg_vcasecmp(&hm->proto, "HTTP/1.1") != 0) return 0;
@@ -880,9 +887,9 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
     int result, id;
 
 #ifdef DEBUG
-    write_log("%d conn=%p nc=%p ev=%d ev_data=%p bec=%p bec_nc=%p\n", now, conn,
-            nc, ev, ev_data, conn != NULL ? conn->be_conn : NULL,
-            conn != NULL && conn->be_conn != NULL ? conn->be_conn->nc : NULL);
+    //write_log("%d conn=%p nc=%p ev=%d ev_data=%p bec=%p bec_nc=%p\n", now, conn,
+    //        nc, ev, ev_data, conn != NULL ? conn->be_conn : NULL,
+    //        conn != NULL && conn->be_conn != NULL ? conn->be_conn->nc : NULL);
 #endif
 
     if (conn == NULL) {
@@ -1022,6 +1029,10 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
                 assert(conn != NULL);
                 struct http_message *hm = (struct http_message *) ev_data;
                 conn->backend.flags.keep_alive = s_backend_keepalive && is_keep_alive(hm);
+                if(!conn->backend.flags.keep_alive) {
+                    //tt bug: if the backend connection closed, close the client too
+                    conn->client.flags.keep_alive = 0;
+                }
                 forward(conn, hm, &conn->backend, &conn->client);
                 release_backend(conn);
                 if (!conn->client.flags.keep_alive) {
