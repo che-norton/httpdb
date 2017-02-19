@@ -22,6 +22,8 @@
 #define PREFIX_RESP_LEN (7)
 #define PREFIX_RESULT "/_result/"
 #define PREFIX_RESULT_LEN (9)
+#define UPLOAD_API "/_upload/"
+#define UPLOAD_API_LEN (9)
 
 //#define DEBUG
 
@@ -70,6 +72,11 @@ struct peer {
     } flags;
 };
 
+struct file_writer_data {
+    FILE *fp;
+    size_t bytes_written;
+};
+
 struct conn_data {
     struct be_conn *be_conn; /* Chosen backend */
     struct peer client;      /* Client peer */
@@ -77,6 +84,8 @@ struct conn_data {
     time_t last_activity;
     int https;
     int id;
+
+    struct file_writer_data *file_data;
 };
 
 #define DEFAULT_RESP_LEN (127)
@@ -881,7 +890,7 @@ static int check_path_exists(const char *url, int len) {
     return 0;
 }
 
-static struct mg_str upload_cb(struct mg_connection *c, struct mg_str file_name) {
+/* static struct mg_str upload_cb(struct mg_connection *c, struct mg_str file_name) {
     struct mg_str new_file = {0};
     char *path = malloc(256);
     size_t n = sprintf(path, "%s/%s", s_http_tmp_opts.document_root, file_name.p);
@@ -889,7 +898,7 @@ static struct mg_str upload_cb(struct mg_connection *c, struct mg_str file_name)
     new_file.p = path;
     //printf("filename=%.*s\n", (int)new_file.len, new_file.p);
     return new_file;
-}
+} */
 
 static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int https) {
     struct conn_data *conn = (struct conn_data *) nc->user_data;
@@ -1053,11 +1062,11 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
                 break;
             }
 
-        case MG_EV_HTTP_PART_BEGIN:
+        /* case MG_EV_HTTP_PART_BEGIN:
         case MG_EV_HTTP_PART_DATA:
         case MG_EV_HTTP_PART_END:
             mg_file_upload_handler(nc, ev, ev_data, upload_cb);
-            break;
+            break; */
 
         case MG_EV_POLL:
             {
@@ -1112,6 +1121,58 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
                 break;
             }
     }
+}
+
+//https://github.com/cesanta/mongoose/blob/master/examples/big_upload/big_upload.c
+static void handle_upload(struct mg_connection *nc, int ev, void *p) {
+    struct conn_data *conn = (struct conn_data *) nc->user_data;
+    struct file_writer_data *data = (struct file_writer_data *) conn->file_data;
+    struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
+
+    switch (ev) {
+    case MG_EV_HTTP_PART_BEGIN: {
+      if (data == NULL) {
+        data = calloc(1, sizeof(struct file_writer_data));
+        printf("filename=%s\n", mp->file_name);
+        data->fp = tmpfile();
+        data->bytes_written = 0;
+
+        if (data->fp == NULL) {
+          mg_printf(nc, "%s",
+                    "HTTP/1.1 500 Failed to open a file\r\n"
+                    "Content-Length: 0\r\n\r\n");
+          nc->flags |= MG_F_SEND_AND_CLOSE;
+          return;
+        }
+        conn->file_data = (void *) data;
+      }
+      break;
+    }
+    case MG_EV_HTTP_PART_DATA: {
+      if (fwrite(mp->data.p, 1, mp->data.len, data->fp) != mp->data.len) {
+        mg_printf(nc, "%s",
+                  "HTTP/1.1 500 Failed to write to a file\r\n"
+                  "Content-Length: 0\r\n\r\n");
+        nc->flags |= MG_F_SEND_AND_CLOSE;
+        return;
+      }
+      data->bytes_written += mp->data.len;
+      break;
+    }
+    case MG_EV_HTTP_PART_END: {
+      mg_printf(nc,
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: text/plain\r\n"
+                "Connection: close\r\n\r\n"
+                "Written %ld of POST data to a temp file\n\n",
+                (long) ftell(data->fp));
+      nc->flags |= MG_F_SEND_AND_CLOSE;
+      fclose(data->fp);
+      free(data);
+      conn->file_data = NULL;
+      break;
+    }
+  }
 }
 
 static void print_usage_and_exit(const char *prog_name) {
@@ -1224,6 +1285,7 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "mg_bind(%s) failed\n", http_port);
             exit(EXIT_FAILURE);
         }
+        mg_register_http_endpoint(nc_http, "/_upload", handle_upload);
     }
 
     if (strlen(https_port) > 0) {
@@ -1231,6 +1293,7 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "mg_bind(%s) failed\n", https_port);
             exit(EXIT_FAILURE);
         }
+        mg_register_http_endpoint(nc_https, "/_upload", handle_upload);
     }
 
 #if MG_ENABLE_SSL
