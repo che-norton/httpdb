@@ -4226,12 +4226,15 @@ static struct mg_http_proto_data *mg_http_get_proto_data(
 #ifdef MG_ENABLE_HTTP_STREAMING_MULTIPART
 static void mg_http_free_proto_data_mp_stream(
     struct mg_http_multipart_stream *mp) {
-  free((void *) mp->boundary);
-  mp->boundary = NULL;
-  free((void *) mp->var_name);
-  mp->var_name = NULL;
-  free((void *) mp->file_name);
-  mp->file_name = NULL;
+    //added by janson
+    if(NULL != mp->boundary) {
+      free((void *) mp->boundary);
+      mp->boundary = NULL;
+      free((void *) mp->var_name);
+      mp->var_name = NULL;
+      free((void *) mp->file_name);
+      mp->file_name = NULL;
+    }
 }
 #endif
 
@@ -5098,11 +5101,14 @@ void mg_http_handler(struct mg_connection *nc, int ev, void *ev_data) {
     }
 
 #ifdef MG_ENABLE_HTTP_STREAMING_MULTIPART
-    if (req_len > 0 && (s = mg_get_http_header(hm, "Content-Type")) != NULL &&
-        s->len >= 9 && strncmp(s->p, "multipart", 9) == 0) {
-      mg_http_multipart_begin(nc, hm, req_len);
-      mg_http_multipart_continue(nc);
-      return;
+    if(nc->upload_enabled) {
+        //TODO by janson
+        if (req_len > 0 && (s = mg_get_http_header(hm, "Content-Type")) != NULL &&
+            s->len >= 9 && strncmp(s->p, "multipart", 9) == 0) {
+          mg_http_multipart_begin(nc, hm, req_len);
+          mg_http_multipart_continue(nc);
+          return;
+        }
     }
 #endif /* MG_ENABLE_HTTP_STREAMING_MULTIPART */
 

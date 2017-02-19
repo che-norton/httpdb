@@ -22,8 +22,8 @@
 #define PREFIX_RESP_LEN (7)
 #define PREFIX_RESULT "/_result/"
 #define PREFIX_RESULT_LEN (9)
-#define UPLOAD_API "/_upload/"
-#define UPLOAD_API_LEN (9)
+#define UPLOAD_API "/_upload"
+#define UPLOAD_API_LEN (8)
 
 //#define DEBUG
 
@@ -890,7 +890,8 @@ static int check_path_exists(const char *url, int len) {
     return 0;
 }
 
-/* static struct mg_str upload_cb(struct mg_connection *c, struct mg_str file_name) {
+#if 0
+static struct mg_str upload_cb(struct mg_connection *c, struct mg_str file_name) {
     struct mg_str new_file = {0};
     char *path = malloc(256);
     size_t n = sprintf(path, "%s/%s", s_http_tmp_opts.document_root, file_name.p);
@@ -898,7 +899,8 @@ static int check_path_exists(const char *url, int len) {
     new_file.p = path;
     //printf("filename=%.*s\n", (int)new_file.len, new_file.p);
     return new_file;
-} */
+}
+#endif
 
 static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int https) {
     struct conn_data *conn = (struct conn_data *) nc->user_data;
@@ -999,6 +1001,10 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
                     nc->flags |= MG_F_SEND_AND_CLOSE;
                     conn->client.nc = NULL;
                     break;
+                } else if(hm != NULL && has_prefix(&hm->uri, UPLOAD_API)) {
+                    printf("abc\n");
+                    nc->upload_enabled = 1;
+                    conn->client.nc = NULL;
                 } else {
                     if(check_path_exists(hm->uri.p, hm->uri.len)) {
                         mg_serve_http(nc, hm, s_http_server_opts);
@@ -1129,6 +1135,8 @@ static void handle_upload(struct mg_connection *nc, int ev, void *p) {
     struct file_writer_data *data = (struct file_writer_data *) conn->file_data;
     struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
 
+    nc->upload_enabled = 1;
+    printf("handle_upload\n");
     switch (ev) {
     case MG_EV_HTTP_PART_BEGIN: {
       if (data == NULL) {
