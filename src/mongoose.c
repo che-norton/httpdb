@@ -5101,6 +5101,8 @@ void mg_http_handler(struct mg_connection *nc, int ev, void *ev_data) {
     }
 
 #ifdef MG_ENABLE_HTTP_STREAMING_MULTIPART
+    if(hm != NULL && has_prefix(&hm->uri, "/_upload")) {
+    }
     if(nc->upload_enabled) {
         //TODO by janson
         if (req_len > 0 && (s = mg_get_http_header(hm, "Content-Type")) != NULL &&
