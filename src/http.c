@@ -23,7 +23,6 @@
 #define PREFIX_RESULT "/_result/"
 #define PREFIX_RESULT_LEN (9)
 #define UPLOAD_API "/_upload"
-#define UPLOAD_API_LEN (8)
 
 //#define DEBUG
 
@@ -939,7 +938,12 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
 
     conn->https = https;
 
-    if (ev != MG_EV_POLL) conn->last_activity = now;
+    if (ev != MG_EV_POLL) {
+        conn->last_activity = now;
+        write_log("%d conn=%p nc=%p ev=%d ev_data=%p bec=%p bec_nc=%p\n", now, conn,
+                nc, ev, ev_data, conn != NULL ? conn->be_conn : NULL,
+                conn != NULL && conn->be_conn != NULL ? conn->be_conn->nc : NULL);
+    }
 
     switch (ev) {
         case MG_EV_HTTP_REQUEST:
@@ -1001,10 +1005,6 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
                     nc->flags |= MG_F_SEND_AND_CLOSE;
                     conn->client.nc = NULL;
                     break;
-                } else if(hm != NULL && has_prefix(&hm->uri, UPLOAD_API)) {
-                    printf("abc\n");
-                    nc->upload_enabled = 1;
-                    conn->client.nc = NULL;
                 } else {
                     if(check_path_exists(hm->uri.p, hm->uri.len)) {
                         mg_serve_http(nc, hm, s_http_server_opts);
@@ -1052,6 +1052,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
                 assert(conn != NULL);
                 struct http_message *hm = (struct http_message *) ev_data;
                 conn->backend.flags.keep_alive = s_backend_keepalive && is_keep_alive(hm);
+                printf("resp_code=%d\n", hm->resp_code);
                 if(!conn->backend.flags.keep_alive) {
                     //tt bug: if the backend connection closed, close the client too
                     conn->client.flags.keep_alive = 0;
@@ -1129,13 +1130,13 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
     }
 }
 
+#if 0
 //https://github.com/cesanta/mongoose/blob/master/examples/big_upload/big_upload.c
 static void handle_upload(struct mg_connection *nc, int ev, void *p) {
     struct conn_data *conn = (struct conn_data *) nc->user_data;
     struct file_writer_data *data = (struct file_writer_data *) conn->file_data;
     struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
 
-    nc->upload_enabled = 1;
     printf("handle_upload\n");
     switch (ev) {
     case MG_EV_HTTP_PART_BEGIN: {
@@ -1182,6 +1183,7 @@ static void handle_upload(struct mg_connection *nc, int ev, void *p) {
     }
   }
 }
+#endif
 
 static void print_usage_and_exit(const char *prog_name) {
     fprintf(stderr,
@@ -1293,7 +1295,7 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "mg_bind(%s) failed\n", http_port);
             exit(EXIT_FAILURE);
         }
-        mg_register_http_endpoint(nc_http, "/_upload", handle_upload);
+        //mg_register_http_endpoint(nc_http, UPLOAD_API, handle_upload);
     }
 
     if (strlen(https_port) > 0) {
@@ -1301,7 +1303,7 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "mg_bind(%s) failed\n", https_port);
             exit(EXIT_FAILURE);
         }
-        mg_register_http_endpoint(nc_https, "/_upload", handle_upload);
+        //mg_register_http_endpoint(nc_https, UPLOAD_API, handle_upload);
     }
 
 #if MG_ENABLE_SSL

@@ -1288,8 +1288,6 @@ struct mg_connection {
   void *priv_2;   /* Used by mg_enable_multithreading() */
   void *mgr_data; /* Implementation-specific event manager's data. */
   unsigned long flags;
-
-  int upload_enabled; /* added by janson */
 /* Flags set by Mongoose */
 #define MG_F_LISTENING (1 << 0)          /* This connection is listening */
 #define MG_F_UDP (1 << 1)                /* This connection is UDP */
@@ -2099,7 +2097,7 @@ extern "C" {
 #endif
 
 //By janson, enable upload
-#define MG_ENABLE_HTTP_STREAMING_MULTIPART
+//#define MG_ENABLE_HTTP_STREAMING_MULTIPART
 
 /* HTTP message */
 struct http_message {

@@ -4230,8 +4230,12 @@ static void mg_http_free_proto_data_mp_stream(
     if(NULL != mp->boundary) {
       free((void *) mp->boundary);
       mp->boundary = NULL;
+    }
+    if(NULL != mp->var_name) {
       free((void *) mp->var_name);
       mp->var_name = NULL;
+    }
+    if(NULL != mp->file_name) {
       free((void *) mp->file_name);
       mp->file_name = NULL;
     }
@@ -5048,6 +5052,7 @@ void mg_http_handler(struct mg_connection *nc, int ev, void *ev_data) {
   if (ev == MG_EV_CLOSE) {
 #ifdef MG_ENABLE_HTTP_STREAMING_MULTIPART
     if (pd->mp_stream.boundary != NULL) {
+        printf("uploada\n");
       /*
        * Multipart message is in progress, but we get close
        * MG_EV_HTTP_PART_END with error flag
@@ -5087,6 +5092,7 @@ void mg_http_handler(struct mg_connection *nc, int ev, void *ev_data) {
 
 #ifdef MG_ENABLE_HTTP_STREAMING_MULTIPART
     if (pd->mp_stream.boundary != NULL) {
+        printf("uploadb\n");
       mg_http_multipart_continue(nc);
       return;
     }
@@ -5101,9 +5107,8 @@ void mg_http_handler(struct mg_connection *nc, int ev, void *ev_data) {
     }
 
 #ifdef MG_ENABLE_HTTP_STREAMING_MULTIPART
-    if(hm != NULL && has_prefix(&hm->uri, "/_upload")) {
-    }
-    if(nc->upload_enabled) {
+    if(hm != NULL && mg_match_prefix(hm->uri.p, hm->uri.len, "/_upload")) {
+        printf("uploadc\n");
         //TODO by janson
         if (req_len > 0 && (s = mg_get_http_header(hm, "Content-Type")) != NULL &&
             s->len >= 9 && strncmp(s->p, "multipart", 9) == 0) {
