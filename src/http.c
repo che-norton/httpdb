@@ -307,11 +307,6 @@ static void respond_with_error(struct conn_data *conn, const char *err_line) {
     nc->flags |= MG_F_SEND_AND_CLOSE;
 }
 
-static int has_prefix(const struct mg_str *uri, const char *prefix) {
-    size_t prefix_len = strlen(prefix);
-    return uri->len >= prefix_len && memcmp(uri->p, prefix, prefix_len) == 0;
-}
-
 static int matches_vhost(const struct mg_str *host, const char *vhost) {
     size_t vhost_len;
     if (vhost == NULL) {
@@ -350,7 +345,7 @@ static struct http_backend *choose_backend_from_list(
     for (i = 0; i < num_backends; i++) {
         struct http_backend *be = &backends[i];
         //printf("be->vhost=%s hm->uri=%s prefix=%s\n", be->vhost, hm->uri.p, be->uri_prefix);
-        if (has_prefix(&hm->uri, be->uri_prefix) &&
+        if (mg_has_prefix(&hm->uri, be->uri_prefix) &&
                 matches_vhost(&vhost, be->vhost) &&
                 (chosen == NULL ||
                  /* Prefer most specific URI prefixes */
@@ -940,9 +935,6 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
 
     if (ev != MG_EV_POLL) {
         conn->last_activity = now;
-        write_log("%d conn=%p nc=%p ev=%d ev_data=%p bec=%p bec_nc=%p\n", now, conn,
-                nc, ev, ev_data, conn != NULL ? conn->be_conn : NULL,
-                conn != NULL && conn->be_conn != NULL ? conn->be_conn->nc : NULL);
     }
 
     switch (ev) {
@@ -954,7 +946,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
 
                 check_timeout(&sreq_mgr, time(NULL));
 
-                if(hm != NULL && has_prefix(&hm->uri, PREFIX_API)) {
+                if(hm != NULL && mg_has_prefix(&hm->uri, PREFIX_API)) {
                     result = process_json(conn, hm);
                     if(result != 0) {
                         mg_printf_http_chunk(nc, "{ \"result\": %d }", result);
@@ -965,7 +957,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
                     }
 
                     break;
-                } else if(hm != NULL && has_prefix(&hm->uri, PREFIX_ROOT)) {
+                } else if(hm != NULL && mg_has_prefix(&hm->uri, PREFIX_ROOT)) {
                     //rewrite uri
                     hm->uri.p += PREFIX_ROOT_LEN-1;
                     hm->uri.len -= PREFIX_ROOT_LEN-1;
@@ -974,7 +966,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
                     nc->flags |= MG_F_SEND_AND_CLOSE;
                     conn->client.nc = NULL;
                     break;
-                } else if(hm != NULL && has_prefix(&hm->uri, PREFIX_TEMP)) {
+                } else if(hm != NULL && mg_has_prefix(&hm->uri, PREFIX_TEMP)) {
                     //rewrite uri
                     hm->uri.p += PREFIX_TEMP_LEN-1;
                     hm->uri.len -= PREFIX_TEMP_LEN-1;
@@ -983,7 +975,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
                     nc->flags |= MG_F_SEND_AND_CLOSE;
                     conn->client.nc = NULL;
                     break;
-                } else if(hm != NULL && has_prefix(&hm->uri, PREFIX_RESP)) {
+                } else if(hm != NULL && mg_has_prefix(&hm->uri, PREFIX_RESP)) {
 
                     id = 0;
                     result = process_resp(nc, hm, &id);
@@ -998,7 +990,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
                     }
 
                     break;
-                } else if(hm != NULL && has_prefix(&hm->uri, PREFIX_RESULT)) {
+                } else if(hm != NULL && mg_has_prefix(&hm->uri, PREFIX_RESULT)) {
 
                     process_result(nc, hm);
 
@@ -1052,19 +1044,17 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
                 assert(conn != NULL);
                 struct http_message *hm = (struct http_message *) ev_data;
                 conn->backend.flags.keep_alive = s_backend_keepalive && is_keep_alive(hm);
-                printf("resp_code=%d\n", hm->resp_code);
+                //printf("resp_code=%d\n", hm->resp_code);
                 if(!conn->backend.flags.keep_alive) {
                     //tt bug: if the backend connection closed, close the client too
                     conn->client.flags.keep_alive = 0;
                 }
-                forward(conn, hm, &conn->backend, &conn->client);
+                if(conn->client.nc != NULL) {
+                    forward(conn, hm, &conn->backend, &conn->client);
+                }
                 release_backend(conn);
-                if (!conn->client.flags.keep_alive) {
+                if (!conn->client.flags.keep_alive && conn->client.nc != NULL) {
                     conn->client.nc->flags |= MG_F_SEND_AND_CLOSE;
-                } else {
-#ifdef DEBUG
-                    write_log("conn=%p remains open\n", conn);
-#endif
                 }
                 break;
             }
@@ -1130,27 +1120,31 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
     }
 }
 
-#if 0
 //https://github.com/cesanta/mongoose/blob/master/examples/big_upload/big_upload.c
 static void handle_upload(struct mg_connection *nc, int ev, void *p) {
     struct conn_data *conn = (struct conn_data *) nc->user_data;
     struct file_writer_data *data = (struct file_writer_data *) conn->file_data;
     struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
+    char filepath[512];
 
     printf("handle_upload\n");
     switch (ev) {
     case MG_EV_HTTP_PART_BEGIN: {
       if (data == NULL) {
         data = calloc(1, sizeof(struct file_writer_data));
-        printf("filename=%s\n", mp->file_name);
-        data->fp = tmpfile();
-        data->bytes_written = 0;
+        if(mp->var_name != NULL) {
+            snprintf(filepath, 511, "%s/%s", s_http_tmp_opts.document_root, mp->var_name);
+            data->fp = fopen(filepath, "wb");
+            data->bytes_written = 0;
+        }
 
         if (data->fp == NULL) {
           mg_printf(nc, "%s",
                     "HTTP/1.1 500 Failed to open a file\r\n"
                     "Content-Length: 0\r\n\r\n");
           nc->flags |= MG_F_SEND_AND_CLOSE;
+          free(data);
+          conn->file_data = NULL;
           return;
         }
         conn->file_data = (void *) data;
@@ -1163,6 +1157,10 @@ static void handle_upload(struct mg_connection *nc, int ev, void *p) {
                   "HTTP/1.1 500 Failed to write to a file\r\n"
                   "Content-Length: 0\r\n\r\n");
         nc->flags |= MG_F_SEND_AND_CLOSE;
+
+        fclose(data->fp);
+        free(data);
+        conn->file_data = NULL;
         return;
       }
       data->bytes_written += mp->data.len;
@@ -1171,10 +1169,10 @@ static void handle_upload(struct mg_connection *nc, int ev, void *p) {
     case MG_EV_HTTP_PART_END: {
       mg_printf(nc,
                 "HTTP/1.1 200 OK\r\n"
-                "Content-Type: text/plain\r\n"
+                "Content-Type: application/json\r\n"
                 "Connection: close\r\n\r\n"
-                "Written %ld of POST data to a temp file\n\n",
-                (long) ftell(data->fp));
+                "{'filepath':'%s/%s', 'filelength':%ld}\n"
+                , s_http_tmp_opts.document_root, mp->var_name, (long) ftell(data->fp));
       nc->flags |= MG_F_SEND_AND_CLOSE;
       fclose(data->fp);
       free(data);
@@ -1183,7 +1181,6 @@ static void handle_upload(struct mg_connection *nc, int ev, void *p) {
     }
   }
 }
-#endif
 
 static void print_usage_and_exit(const char *prog_name) {
     fprintf(stderr,
@@ -1295,7 +1292,7 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "mg_bind(%s) failed\n", http_port);
             exit(EXIT_FAILURE);
         }
-        //mg_register_http_endpoint(nc_http, UPLOAD_API, handle_upload);
+        mg_register_http_endpoint(nc_http, UPLOAD_API, handle_upload);
     }
 
     if (strlen(https_port) > 0) {
@@ -1303,7 +1300,7 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "mg_bind(%s) failed\n", https_port);
             exit(EXIT_FAILURE);
         }
-        //mg_register_http_endpoint(nc_https, UPLOAD_API, handle_upload);
+        mg_register_http_endpoint(nc_https, UPLOAD_API, handle_upload);
     }
 
 #if MG_ENABLE_SSL

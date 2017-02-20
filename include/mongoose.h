@@ -2060,6 +2060,9 @@ const char *mg_next_comma_list_entry(const char *list, struct mg_str *val,
 int mg_match_prefix(const char *pattern, int pattern_len, const char *str);
 int mg_match_prefix_n(const struct mg_str pattern, const struct mg_str str);
 
+//added by janson
+int mg_has_prefix(const struct mg_str *uri, const char *prefix);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
@@ -2118,7 +2121,7 @@ extern "C" {
 #endif
 
 //By janson, enable upload
-//#define MG_ENABLE_HTTP_STREAMING_MULTIPART
+#define MG_ENABLE_HTTP_STREAMING_MULTIPART
 
 /* HTTP message */
 struct http_message {

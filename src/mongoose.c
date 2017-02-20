@@ -4557,6 +4557,12 @@ int mg_parse_http(const char *s, int n, struct http_message *hm, int is_req) {
     hm->message.len = len;
   }
 
+  if(304 == hm->resp_code && !is_req) {
+      //by janson, ignore the content-length of 304
+    hm->body.len = 0;
+    hm->message.len = len;
+  }
+
   return len;
 }
 
@@ -5153,7 +5159,7 @@ void mg_http_handler(struct mg_connection *nc, int ev, void *ev_data) {
     }
 
 #ifdef MG_ENABLE_HTTP_STREAMING_MULTIPART
-    if(hm != NULL && mg_match_prefix(hm->uri.p, hm->uri.len, "/_upload")) {
+    if(hm != NULL && mg_has_prefix(&hm->uri, "/_upload")) {
         printf("uploadc\n");
         //TODO by janson
         if (req_len > 0 && (s = mg_get_http_header(hm, "Content-Type")) != NULL &&
@@ -8274,6 +8280,12 @@ int mg_match_prefix_n(const struct mg_str pattern, const struct mg_str str) {
 int mg_match_prefix(const char *pattern, int pattern_len, const char *str) {
   const struct mg_str pstr = {pattern, (size_t) pattern_len};
   return mg_match_prefix_n(pstr, mg_mk_str(str));
+}
+
+//added by janson
+int mg_has_prefix(const struct mg_str *uri, const char *prefix) {
+    size_t prefix_len = strlen(prefix);
+    return uri->len >= prefix_len && memcmp(uri->p, prefix, prefix_len) == 0;
 }
 
 #ifdef MG_MODULE_LINES
