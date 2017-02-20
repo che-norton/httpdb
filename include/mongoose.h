@@ -20,7 +20,7 @@
 #ifndef CS_MONGOOSE_SRC_COMMON_H_
 #define CS_MONGOOSE_SRC_COMMON_H_
 
-#define MG_VERSION "6.4"
+#define MG_VERSION "6.5"
 
 /* Local tweaks, applied before any of Mongoose's own headers. */
 #ifdef MG_LOCALS
@@ -740,6 +740,8 @@ void mg_run_in_task(void (*cb)(struct mg_mgr *mgr, void *arg), void *cb_arg);
 
 int sl_fs_init();
 
+void sl_restart_cb(struct mg_mgr *mgr);
+
 int sl_set_ssl_opts(struct mg_connection *nc);
 
 #ifdef __cplusplus
@@ -839,6 +841,53 @@ double cs_time(void);
 #endif /* __cplusplus */
 
 #endif /* CS_COMMON_CS_TIME_H_ */
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_MG_STR_H_
+#define CS_COMMON_MG_STR_H_
+
+#include <stddef.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+/* Describes chunk of memory */
+struct mg_str {
+  const char *p; /* Memory chunk pointer */
+  size_t len;    /* Memory chunk length */
+};
+
+/*
+ * A helper function for creating mg_str struct from plain C string.
+ * `NULL` is allowed and becomes `{NULL, 0}`.
+ */
+struct mg_str mg_mk_str(const char *s);
+
+/* Macro for initializing mg_str. */
+#define MG_MK_STR(str_literal) \
+  { str_literal, sizeof(str_literal) - 1 }
+
+/*
+ * Cross-platform version of `strcmp()` where where first string is
+ * specified by `struct mg_str`.
+ */
+int mg_vcmp(const struct mg_str *str2, const char *str1);
+
+/*
+ * Cross-platform version of `strncasecmp()` where first string is
+ * specified by `struct mg_str`.
+ */
+int mg_vcasecmp(const struct mg_str *str2, const char *str1);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* CS_COMMON_MG_STR_H_ */
 /*
  * Copyright (c) 2015 Cesanta Software Limited
  * All rights reserved
@@ -1204,12 +1253,6 @@ union socket_address {
 #else
   struct sockaddr sin6;
 #endif
-};
-
-/* Describes chunk of memory */
-struct mg_str {
-  const char *p; /* Memory chunk pointer */
-  size_t len;    /* Memory chunk length */
 };
 
 struct mg_connection;
@@ -1860,18 +1903,6 @@ int mg_ncasecmp(const char *s1, const char *s2, size_t len);
 int mg_casecmp(const char *s1, const char *s2);
 
 /*
- * Cross-platform version of `strcmp()` where where first string is
- * specified by `struct mg_str`.
- */
-int mg_vcmp(const struct mg_str *str2, const char *str1);
-
-/*
- * Cross-platform version of `strncasecmp()` where first string is
- * specified by `struct mg_str`.
- */
-int mg_vcasecmp(const struct mg_str *str2, const char *str1);
-
-/*
  * Decode base64-encoded string `s`, `len` into the destination `dst`.
  * Destination has to have enough space to hold decoded buffer.
  * Decoding stops either when all string has been decoded, or invalid
@@ -2028,16 +2059,6 @@ const char *mg_next_comma_list_entry(const char *list, struct mg_str *val,
  */
 int mg_match_prefix(const char *pattern, int pattern_len, const char *str);
 int mg_match_prefix_n(const struct mg_str pattern, const struct mg_str str);
-
-/*
- * A helper function for creating mg_str struct from plain C string.
- * `NULL` is allowed and becomes `{NULL, 0}`.
- */
-struct mg_str mg_mk_str(const char *s);
-
-/* Macro for initializing mg_str. */
-#define MG_MK_STR(str_literal) \
-  { str_literal, sizeof(str_literal) - 1 }
 
 #ifdef __cplusplus
 }
