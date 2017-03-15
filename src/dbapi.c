@@ -139,23 +139,29 @@ int dbclient_bulk(dbclient* client, const char* command, const char* key, int nk
     int n1,n2,nc;
 
     nc = strlen(command);
-    if(nk <= 0 || nv <= 0) {
+    if(nk <= 0) {
         return -1;
     }
 
-    n1 = nc + nk + nv + 3;// replace key value\n
-    check_buf(client, n1 + HEADER_PREFIX);
-    n2 = sprintf(client->buf, "%s%07d %s ", MAGIC, n1, command);
+    if(!strcmp(command, "set") && nv == 0) {
+        n1 = strlen("remove") + nk + 2;// remove key\n
+        check_buf(client, n1 + HEADER_PREFIX);
+        n2 = sprintf(client->buf, "%s%07d remove %.*s\n", MAGIC, n1, nk, key);
+    } else {
+        n1 = nc + nk + nv + 3;// replace key value\n
+        check_buf(client, n1 + HEADER_PREFIX);
+        n2 = sprintf(client->buf, "%s%07d %s ", MAGIC, n1, command);
 
-    memcpy(client->buf + n2, key, nk);
-    client->buf[n2+nk] = ' ';
-    n2 += nk + 1;
+        memcpy(client->buf + n2, key, nk);
+        client->buf[n2+nk] = ' ';
+        n2 += nk + 1;
 
-    memcpy(client->buf + n2, value, nv);
-    client->buf[n2+nv] = '\n';
-    n2 += nv + 1;
+        memcpy(client->buf + n2, value, nv);
+        client->buf[n2+nv] = '\n';
+        n2 += nv + 1;
 
-    client->buf[n2] = '\0';
+        client->buf[n2] = '\0';
+    }
 
     if(0 == write_util(client, n1 + HEADER_PREFIX, 200)) {
         ignore_result(client);

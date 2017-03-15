@@ -717,9 +717,13 @@ static int process_json(struct conn_data* conn, struct http_message *hm) {
             //printf("n=%d origin=%d\n", n, fields[0].num_desc);
 
             for(i = 0; i <= n; i++) {
-                if(fields[i*2+1].len > 0 && fields[i*2+2].len > 0) {
-                    //printf("o1=%d o2=%d\n", fields[i*2+1].len, fields[i*2+2].len);
-                    dbclient_bulk(&client, "set", fields[i*2+1].ptr, fields[i*2+1].len, fields[i*2+2].ptr, fields[i*2+2].len);
+                if(fields[i*2+1].len > 0) {
+                    if(fields[i*2+2].len > 0) {
+                        //printf("o1=%d o2=%d\n", fields[i*2+1].len, fields[i*2+2].len);
+                        dbclient_bulk(&client, "set", fields[i*2+1].ptr, fields[i*2+1].len, fields[i*2+2].ptr, fields[i*2+2].len);
+                    } else {
+                        dbclient_bulk(&client, "set", fields[i*2+1].ptr, fields[i*2+1].len, "", 0);
+                    }
                 }
             }
 
@@ -1171,7 +1175,7 @@ static void handle_upload(struct mg_connection *nc, int ev, void *p) {
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Type: application/json\r\n"
                 "Connection: close\r\n\r\n"
-                "{'filepath':'%s/%s', 'filelength':%ld}\n"
+                "{\"filepath\":\"%s/%s\", \"filelength\":%ld}\n"
                 , s_http_tmp_opts.document_root, mp->var_name, (long) ftell(data->fp));
       nc->flags |= MG_F_SEND_AND_CLOSE;
       fclose(data->fp);
