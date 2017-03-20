@@ -1214,6 +1214,7 @@ int main(int argc, char *argv[]) {
     char http_port[64], https_port[64], www[128], reverse[128];
     char *vhost = NULL, *cert = NULL, *log = NULL;
     int c = 0;//IMPORTANT use int
+    //char* mime_types = ".txt=application/octet-stream;.sh=application/octet-stream";
 
     mg_mgr_init(&mgr, NULL);
 
@@ -1224,9 +1225,11 @@ int main(int argc, char *argv[]) {
     //s_http_server_opts.document_root = "../tests/web_root";
     //s_http_server_opts.enable_directory_listing = "no";
     //s_http_server_opts.url_rewrites = "/_root=/web_root";
+    //s_http_server_opts.custom_mime_types = mime_types;
 
     s_http_tmp_opts.document_root = "/tmp/upload";
     s_http_tmp_opts.enable_directory_listing = "no";
+    //s_http_tmp_opts.custom_mime_types = mime_types;
 
     http_port[0] = '\0';
     https_port[0] = '\0';

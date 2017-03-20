@@ -5144,7 +5144,6 @@ void mg_http_handler(struct mg_connection *nc, int ev, void *ev_data) {
 
 #ifdef MG_ENABLE_HTTP_STREAMING_MULTIPART
     if (pd->mp_stream.boundary != NULL) {
-        printf("uploadb\n");
       mg_http_multipart_continue(nc);
       return;
     }
@@ -5160,7 +5159,6 @@ void mg_http_handler(struct mg_connection *nc, int ev, void *ev_data) {
 
 #ifdef MG_ENABLE_HTTP_STREAMING_MULTIPART
     if(hm != NULL && mg_has_prefix(&hm->uri, "/_upload")) {
-        printf("uploadc\n");
         //TODO by janson
         if (req_len > 0 && (s = mg_get_http_header(hm, "Content-Type")) != NULL &&
             s->len >= 9 && strncmp(s->p, "multipart", 9) == 0) {
