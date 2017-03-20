@@ -87,7 +87,7 @@ struct conn_data {
     struct file_writer_data *file_data;
 };
 
-#define DEFAULT_RESP_LEN (127)
+#define DEFAULT_RESP_LEN (4095)
 struct json_req {
     STAILQ_ENTRY(json_req) reqs;
 
@@ -675,7 +675,7 @@ static int dblist_prefix(struct mg_connection *nc, dbclient* client, char* prefi
 static int process_json(struct conn_data* conn, struct http_message *hm) {
 #define DST_LEN (510)
     int i, n, dst_len = DST_LEN;
-    struct json_token tokens[200] = {{0}};
+    struct json_token tokens[2048] = {{0}};
     char *buf, dst[DST_LEN+128];
     struct json_token *method, *params, *fields;
     struct mg_connection *nc = conn->client.nc;
