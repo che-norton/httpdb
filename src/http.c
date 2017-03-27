@@ -673,7 +673,7 @@ static int dblist_prefix(struct mg_connection *nc, dbclient* client, char* prefi
 }
 
 static int process_json(struct conn_data* conn, struct http_message *hm) {
-#define DST_LEN (510)
+#define DST_LEN (4096)
     int i, n, dst_len = DST_LEN;
     struct json_token tokens[2048] = {{0}};
     char *buf, dst[DST_LEN+128];
@@ -756,7 +756,7 @@ static int process_json(struct conn_data* conn, struct http_message *hm) {
                     }
                     n = params[i].len;
 
-                    if(JSON_TYPE_NUMBER == params[i].type) {
+                    if(JSON_TYPE_NUMBER == params[i].type || JSON_TYPE_STRING == params[i].type) {
                         memcpy(buf, params[i].ptr, n);
                         buf[n] = ' ';
                         buf[n+1] = '\0';
@@ -767,7 +767,11 @@ static int process_json(struct conn_data* conn, struct http_message *hm) {
             }
 
             //TODO assess for check if xxx.sh is exists
-            n = sprintf(buf, "%s", " > /dev/null 2>&1 &");
+            i = dst_len - (buf - dst);
+            n = snprintf(buf, i, "%s", " > /dev/null 2>&1 &");
+            if(n > i) {
+                return -6;
+            }
             buf[n] = '\0';
 
             n = strtol(fields[0].ptr, NULL, 10);
@@ -1259,12 +1263,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 'h':
                 print_usage_and_exit(argv[0]);
-                break;
             default:
                 // Bug in netgear. c === 0xFF
-                //printf("got c=%x\n", c);
                 c = -1;
-                break;
         }
     }
 
@@ -1321,6 +1322,7 @@ int main(int argc, char *argv[]) {
 #endif
 
     if (s_num_vhost_backends + s_num_default_backends == 0) {
+        fprintf(stderr,  "not http or https found\n");
         print_usage_and_exit(argv[0]);
     }
 
