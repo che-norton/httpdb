@@ -1218,7 +1218,7 @@ int main(int argc, char *argv[]) {
     char http_port[64], https_port[64], www[128], reverse[128];
     char *vhost = NULL, *cert = NULL, *log = NULL;
     int c = 0;//IMPORTANT use int
-    char* mime_types = ".txt=application/octet-stream;.sh=application/octet-stream";
+    char* mime_types = ".txt=application/octet-stream;.sh=application/octet-stream;.log=text/html; charset=utf-8";
 
     mg_mgr_init(&mgr, NULL);
 

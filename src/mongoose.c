@@ -4352,6 +4352,7 @@ static const struct {
   const char *mime_type;
 } mg_static_builtin_mime_types[] = {
     MIME_ENTRY("html", "text/html"),
+    MIME_ENTRY("log", "text/html; charset=utf-8"),
     MIME_ENTRY("asp", "text/html"),
     MIME_ENTRY("htm", "text/html"),
     MIME_ENTRY("shtm", "text/html"),
@@ -6058,6 +6059,7 @@ static void mg_http_send_file2(struct mg_connection *nc, const char *path,
      */
     mg_send_response_line(nc, status_code, opts->extra_headers);
     mg_printf(nc,
+              "Cache-Control: no-cache\r\n"
               "Date: %s\r\n"
               "Last-Modified: %s\r\n"
               "Accept-Ranges: bytes\r\n"
@@ -7635,8 +7637,8 @@ MG_INTERNAL void mg_send_http_file(struct mg_connection *nc, char *path,
 #else
     mg_http_send_error(nc, 501, NULL);
 #endif
-  } else if (mg_is_not_modified(hm, &st)) {
-    mg_http_send_error(nc, 304, "Not Modified");
+  //} else if (mg_is_not_modified(hm, &st)) {
+  //  mg_http_send_error(nc, 304, "Not Modified");
   } else {
     mg_http_send_file2(nc, index_file ? index_file : path, &st, hm, opts);
   }
