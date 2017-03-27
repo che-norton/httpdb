@@ -33,7 +33,8 @@ static int write_util(dbclient* client, int len, unsigned int delay) {
     unsigned int now, timeout;
     struct timeval tv, tv2;
 
-    gettimeofday(&tv2, NULL); timeout = (tv2.tv_sec*1000) + (tv2.tv_usec/1000) + delay;
+    gettimeofday(&tv2, NULL); 
+    timeout = (tv2.tv_sec*1000) + (tv2.tv_usec/1000) + delay;
     while(writed_len < len) {
         n = write(client->remote_fd, client->buf + writed_len, len - writed_len);
         if(n < 0) {
@@ -62,11 +63,16 @@ static int write_util(dbclient* client, int len, unsigned int delay) {
 static int create_client_fd(char* sock_path) {
     int len, remote_fd;
     struct sockaddr_un remote;
+    struct timeval tv;
+
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
 
     if(-1 == (remote_fd = socket(PF_UNIX, SOCK_STREAM, 0))) {
         //perror("socket");
         return -1;
     }
+    setsockopt(remote_fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
 
     remote.sun_family = AF_UNIX;
     strcpy(remote.sun_path, sock_path);
@@ -137,6 +143,10 @@ int dbclient_start(dbclient* client) {
 
 int dbclient_bulk(dbclient* client, const char* command, const char* key, int nk, const char* value, int nv) {
     int n1,n2,nc;
+
+    if(-1 == client->remote_fd) {
+        return -1;
+    }
 
     nc = strlen(command);
     if(nk <= 0) {
