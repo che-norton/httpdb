@@ -18,6 +18,7 @@
 
 //"list "
 #define LIST_LEN 5
+#define READ_TIMEOUT (800)
 
 typedef enum {
     S2ISUCCESS = 0,
@@ -33,7 +34,7 @@ static int write_util(dbclient* client, int len, unsigned int delay) {
     unsigned int now, timeout;
     struct timeval tv, tv2;
 
-    gettimeofday(&tv2, NULL); 
+    gettimeofday(&tv2, NULL);
     timeout = (tv2.tv_sec*1000) + (tv2.tv_usec/1000) + delay;
     while(writed_len < len) {
         n = write(client->remote_fd, client->buf + writed_len, len - writed_len);
@@ -158,7 +159,7 @@ int dbclient_bulk(dbclient* client, const char* command, const char* key, int nk
         check_buf(client, n1 + HEADER_PREFIX);
         n2 = sprintf(client->buf, "%s%07d remove %.*s\n", MAGIC, n1, nk, key);
     } else {
-        n1 = nc + nk + nv + 3;// replace key value\n
+        n1 = nc + nk + nv + 3;// set key value\n
         check_buf(client, n1 + HEADER_PREFIX);
         n2 = sprintf(client->buf, "%s%07d %s ", MAGIC, n1, command);
 
@@ -220,7 +221,7 @@ static int read_util(dbclient* client, int len, unsigned int delay) {
     }
 
     //unkown error
-    return -3;
+    return -13;
 }
 
 static int ignore_result(dbclient *client) {
@@ -228,7 +229,7 @@ static int ignore_result(dbclient *client) {
     char* magic = MAGIC;
 
     do {
-        n1 = read_util(client, HEADER_PREFIX, 110);
+        n1 = read_util(client, HEADER_PREFIX, READ_TIMEOUT);
         if(n1 < 0) {
             return n1;
         }
@@ -244,7 +245,7 @@ static int ignore_result(dbclient *client) {
             return -4;
         }
 
-        n1 = read_util(client, n2, 110);
+        n1 = read_util(client, n2, READ_TIMEOUT);
         if(n1 < 0) {
             return n1;
         }
@@ -258,7 +259,7 @@ static int parse_list_result(dbclient *client, char* prefix, void* o, fn_db_pars
     char *p1, *p2, *magic = MAGIC;
 
     for(;;) {
-        n1 = read_util(client, HEADER_PREFIX, 110);
+        n1 = read_util(client, HEADER_PREFIX, READ_TIMEOUT);
         if(n1 < 0) {
             return n1;
         }
@@ -274,7 +275,7 @@ static int parse_list_result(dbclient *client, char* prefix, void* o, fn_db_pars
             return -4;
         }
 
-        n1 = read_util(client, n2, 510);
+        n1 = read_util(client, n2, READ_TIMEOUT);
         if(n1 < 0) {
             return n1;
         }
