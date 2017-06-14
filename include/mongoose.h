@@ -23,7 +23,7 @@
 #ifndef CS_MONGOOSE_SRC_COMMON_H_
 #define CS_MONGOOSE_SRC_COMMON_H_
 
-#define MG_VERSION "6.7"
+#define MG_VERSION "6.8"
 
 /* Local tweaks, applied before any of Mongoose's own headers. */
 #ifdef MG_LOCALS
@@ -2923,6 +2923,10 @@ struct {								\
 #define MG_ENABLE_MQTT_BROKER 0
 #endif
 
+#define MG_ENABLE_SSL 1
+#define MG_SSL_IF MG_SSL_IF_MBEDTLS
+/* TODO use mbedTLS random functions, by janson */
+#define MG_SSL_MBED_DUMMY_RANDOM
 #ifndef MG_ENABLE_SSL
 #define MG_ENABLE_SSL 0
 #endif
