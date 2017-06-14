@@ -3,11 +3,12 @@
  * All rights reserved
  */
 
-#include "mongoose.h"
+#include <mongoose.h>
+#include <json.h>
 #include <sys/queue.h>
 #include <getopt.h>
-#include "dbapi.h"
-#include "khash.h"
+#include <dbapi.h>
+#include <khash.h>
 
 #define MAX_IDLE_CONNS 5
 #define CONN_IDLE_TIMEOUT 30

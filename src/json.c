@@ -26,6 +26,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <mongoose.h>
+#include <json.h>
 /* Amalgamated: #include "frozen.h" */
 
 #ifdef _WIN32
