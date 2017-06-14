@@ -5204,10 +5204,13 @@ static struct mg_http_proto_data *mg_http_get_proto_data(
 #if MG_ENABLE_HTTP_STREAMING_MULTIPART
 static void mg_http_free_proto_data_mp_stream(
     struct mg_http_multipart_stream *mp) {
-  MG_FREE((void *) mp->boundary);
-  MG_FREE((void *) mp->var_name);
-  MG_FREE((void *) mp->file_name);
-  memset(mp, 0, sizeof(*mp));
+    //added by janson
+    if(NULL != mp->boundary) {
+      MG_FREE((void *) mp->boundary);
+      MG_FREE((void *) mp->var_name);
+      MG_FREE((void *) mp->file_name);
+      memset(mp, 0, sizeof(*mp));
+    }
 }
 #endif
 
@@ -5279,7 +5282,8 @@ static const struct {
   const char *mime_type;
 } mg_static_builtin_mime_types[] = {
     MIME_ENTRY("html", "text/html"),
-    MIME_ENTRY("html", "text/html"),
+    MIME_ENTRY("log", "text/html; charset=utf-8"),
+    MIME_ENTRY("asp", "text/html"),
     MIME_ENTRY("htm", "text/html"),
     MIME_ENTRY("shtm", "text/html"),
     MIME_ENTRY("shtml", "text/html"),
@@ -5480,6 +5484,12 @@ int mg_parse_http(const char *s, int n, struct http_message *hm, int is_req) {
   if (hm->body.len == (size_t) ~0 && is_req &&
       mg_vcasecmp(&hm->method, "PUT") != 0 &&
       mg_vcasecmp(&hm->method, "POST") != 0) {
+    hm->body.len = 0;
+    hm->message.len = len;
+  }
+
+  if(304 == hm->resp_code && !is_req) {
+      //by janson, ignore the content-length of 304
     hm->body.len = 0;
     hm->message.len = len;
   }
@@ -5784,11 +5794,13 @@ void mg_http_handler(struct mg_connection *nc, int ev,
     }
 
 #if MG_ENABLE_HTTP_STREAMING_MULTIPART
-    if (req_len > 0 && (s = mg_get_http_header(hm, "Content-Type")) != NULL &&
-        s->len >= 9 && strncmp(s->p, "multipart", 9) == 0) {
-      mg_http_multipart_begin(nc, hm, req_len);
-      mg_http_multipart_continue(nc);
-      return;
+    if(hm != NULL && mg_has_prefix(&hm->uri, "/_upload")) {
+        if (req_len > 0 && (s = mg_get_http_header(hm, "Content-Type")) != NULL &&
+            s->len >= 9 && strncmp(s->p, "multipart", 9) == 0) {
+          mg_http_multipart_begin(nc, hm, req_len);
+          mg_http_multipart_continue(nc);
+          return;
+        }
     }
 #endif /* MG_ENABLE_HTTP_STREAMING_MULTIPART */
 
