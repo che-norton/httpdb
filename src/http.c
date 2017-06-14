@@ -1216,7 +1216,7 @@ int main(int argc, char *argv[]) {
     struct mg_connection *nc_http = NULL, *nc_https = NULL;
     struct http_backend *be;
     char http_port[64], https_port[64], www[128], reverse[128];
-    char *vhost = NULL, *cert = NULL, *log = NULL;
+    char *vhost = NULL, *cert = NULL;
     int c = 0;//IMPORTANT use int
     char* mime_types = ".txt=application/octet-stream;.sh=application/octet-stream;.log=text/html; charset=utf-8";
 
@@ -1241,7 +1241,7 @@ int main(int argc, char *argv[]) {
     reverse[0] = '\0';
 
     while (c >= 0) {
-        c = getopt_long(argc, argv, "p:s:c:r:w:l:h", long_options, NULL);
+        c = getopt_long(argc, argv, "p:s:c:r:w:h", long_options, NULL);
         switch(c) {
             case 'p':
                 strncpy(http_port, optarg, 63);
@@ -1257,9 +1257,6 @@ int main(int argc, char *argv[]) {
                 break;
             case 'w':
                 strncpy(www, optarg, 127);
-                break;
-            case 'l':
-                log = optarg;
                 break;
             case 'h':
                 print_usage_and_exit(argv[0]);
