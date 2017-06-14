@@ -5795,6 +5795,7 @@ void mg_http_handler(struct mg_connection *nc, int ev,
 
 #if MG_ENABLE_HTTP_STREAMING_MULTIPART
     if(hm != NULL && mg_has_prefix(&hm->uri, "/_upload")) {
+        //TODO by janson
         if (req_len > 0 && (s = mg_get_http_header(hm, "Content-Type")) != NULL &&
             s->len >= 9 && strncmp(s->p, "multipart", 9) == 0) {
           mg_http_multipart_begin(nc, hm, req_len);
