@@ -663,7 +663,7 @@ static int dblist_prefix(struct mg_connection *nc, dbclient* client, char* prefi
         } else {
             mg_printf_http_chunk(nc, ",{");
         }
-        dbclient_list(client, prefix, &db_ctx, print_json);
+        dbclient_list(client, p, &db_ctx, print_json);
         mg_printf_http_chunk(nc, "}\n");
 
         p = strtok(NULL, ",");
