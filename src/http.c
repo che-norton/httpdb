@@ -848,7 +848,7 @@ static int process_result(struct mg_connection *nc, struct http_message *hm) {
 
     n = strtol(dst, NULL, 10);
 
-    mg_printf_http_chunk(nc, "%s", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nContent-Type: application/json\r\n\r\n");
+    mg_printf(nc, "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nContent-Type: application/json\r\n\r\n");
     if(0 != show_shell_resp(&sreq_mgr, n, nc)) {
         mg_printf_http_chunk(nc, "%d", -1);
     }
@@ -989,8 +989,9 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
 
                     id = 0;
                     result = process_resp(nc, hm, &id);
-                    mg_printf_http_chunk(nc, "%s{\"result\":%d}\n", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n"
-                            "Content-Type: application/json\r\n\r\n", result);
+                    mg_printf(nc, "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n"
+                            "Content-Type: application/json\r\n\r\n");
+                    mg_printf_http_chunk(nc, "{\"result\":%d}\n", result);
                     mg_send_http_chunk(nc, "", 0); /* Send empty chunk, the end of response */
                     nc->flags |= MG_F_SEND_AND_CLOSE;
                     conn->client.nc = NULL;
