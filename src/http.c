@@ -24,6 +24,7 @@
 #define PREFIX_RESULT "/_result/"
 #define PREFIX_RESULT_LEN (9)
 #define UPLOAD_API "/_upload"
+#define PREFIX_PATH "/jffs/koolshare"
 
 //#define DEBUG
 
@@ -696,7 +697,7 @@ static int process_json(struct conn_data* conn, struct http_message *hm) {
         buf = dst;
         method = find_json_token(tokens, "method");
         if(method != NULL && JSON_TYPE_STRING == method[0].type && dst_len > method[0].len) {
-            n = sprintf(buf, "%s/", "/jffs/koolshare/scripts");
+            n = sprintf(buf, "%s/", PREFIX_PATH"/scripts");
             memcpy(buf+n, method[0].ptr, method[0].len);
             n += method[0].len;
             buf[n] = '\0';
@@ -847,7 +848,7 @@ static int process_result(struct mg_connection *nc, struct http_message *hm) {
 
     n = strtol(dst, NULL, 10);
 
-    mg_printf_http_chunk(nc, "%s", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nContent-Type: application/json\r\n\r\n");
+    mg_printf(nc, "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nContent-Type: application/json\r\n\r\n");
     if(0 != show_shell_resp(&sreq_mgr, n, nc)) {
         mg_printf_http_chunk(nc, "%d", -1);
     }
@@ -988,8 +989,9 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
 
                     id = 0;
                     result = process_resp(nc, hm, &id);
-                    mg_printf_http_chunk(nc, "%s{\"result\":%d}\n", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n"
-                            "Content-Type: application/json\r\n\r\n", result);
+                    mg_printf(nc, "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n"
+                            "Content-Type: application/json\r\n\r\n");
+                    mg_printf_http_chunk(nc, "{\"result\":%d}\n", result);
                     mg_send_http_chunk(nc, "", 0); /* Send empty chunk, the end of response */
                     nc->flags |= MG_F_SEND_AND_CLOSE;
                     conn->client.nc = NULL;
@@ -1136,7 +1138,7 @@ static void handle_upload(struct mg_connection *nc, int ev, void *p) {
     struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
     char filepath[512];
 
-    printf("handle_upload\n");
+    //printf("handle_upload\n");
     switch (ev) {
     case MG_EV_HTTP_PART_BEGIN: {
       if (data == NULL) {
@@ -1226,7 +1228,7 @@ int main(int argc, char *argv[]) {
     s_backend_keepalive = 1;
     s_log_file = stdout;
     vhost = NULL;
-    cert = "/jffs/koolshare/lib/ssl.pem";
+    cert = PREFIX_PATH"/lib/ssl.pem";
     //s_http_server_opts.document_root = "../tests/web_root";
     //s_http_server_opts.enable_directory_listing = "no";
     //s_http_server_opts.url_rewrites = "/_root=/web_root";
@@ -1238,7 +1240,7 @@ int main(int argc, char *argv[]) {
 
     http_port[0] = '\0';
     https_port[0] = '\0';
-    strcpy(www, "/jffs/koolshare/webs/");
+    strcpy(www, PREFIX_PATH"/webs/");
     reverse[0] = '\0';
 
     while (c >= 0) {
