@@ -1376,8 +1376,13 @@ static int start_main(void) {
         mg_set_protocol_http_websocket(nc_https);
     }
 
-    /* Run event loop until signal is received */
-    app_log(APP_ERR, "Starting http on port %s\nhttps on port %s \nwww=%s\nupload path=/tmp/upload\n", gcfg.http_port, gcfg.https_port, gcfg.www);
+    if(gcfg.http_port[0] != '\0') {
+        app_log(APP_ERR, "Http on addr %s\n", gcfg.http_port);
+    }
+    if(gcfg.https_port[0] != '\0') {
+        app_log(APP_ERR, "Https on addr %s\n", gcfg.http_port);
+    }
+    app_log(APP_ERR, "root=%s\nupload=/tmp/upload\n", gcfg.www);
     for(;;) {
         mg_mgr_poll(&mgr, 1000);
     }
@@ -1427,9 +1432,9 @@ int main(int argc, char *argv[]) {
     s_http_tmp_opts.custom_mime_types = mime_types;
 
     while (c >= 0) {
-        c = getopt_long(argc, argv, "p:s:c:r:w:h:l:D", long_options, NULL);
+        c = getopt_long(argc, argv, "p:s:c:r:w:h:l:d", long_options, NULL);
         switch(c) {
-            case 'D':
+            case 'd':
                 gcfg.daemon = 1;
                 break;
             case 'l':
@@ -1458,7 +1463,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if(gcfg.daemon) {
+    if(gcfg.daemon > 0) {
         daemonize();
     } else {
         start_main();
