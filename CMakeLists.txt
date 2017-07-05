@@ -1,7 +1,7 @@
 PROJECT(httpdb)
 CMAKE_MINIMUM_REQUIRED (VERSION 2.8)
-ADD_DEFINITIONS( -fno-inline -O0 -g -Wstrict-prototypes -std=gnu99 -Wall)
-#ADD_DEFINITIONS( -Os -Wstrict-prototypes -std=gnu99 -Wall)
+#ADD_DEFINITIONS( -fno-inline -O0 -g -Wstrict-prototypes -std=gnu99 -Wall)
+ADD_DEFINITIONS( -Os -Wstrict-prototypes -std=gnu99 -Wall)
 
 set(CMAKE_SYSTEM_NAME Linux)
 set(CMAKE_BUILD_TYPE release)
