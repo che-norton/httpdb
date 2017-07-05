@@ -777,7 +777,7 @@ static int process_json(struct conn_data* conn, struct http_message *hm) {
             buf[n] = '\0';
 
             n = strtol(fields[0].ptr, NULL, 10);
-            //printf("set id=%d flen=%d dst=%s\n", n, fields[0].len, dst);
+            printf("set id=%d flen=%d dst=%s\n", n, fields[0].len, dst);
             system(dst);
 
             new_json_request(&sreq_mgr, nc, n, time(NULL));
@@ -1217,7 +1217,7 @@ const struct option long_options[] = {
 int main(int argc, char *argv[]) {
     struct mg_mgr mgr;
     struct mg_connection *nc_http = NULL, *nc_https = NULL;
-    struct http_backend *be;
+    struct http_backend *be = NULL;
     char http_port[64], https_port[64], www[128], reverse[128];
     char *vhost = NULL, *cert = NULL;
     int c = 0;//IMPORTANT use int
@@ -1271,27 +1271,30 @@ int main(int argc, char *argv[]) {
 
     s_http_server_opts.document_root = www;
 
-    be =
-        vhost != NULL ? &s_vhost_backends[s_num_vhost_backends++]
-        : &s_default_backends[s_num_default_backends++];
-    STAILQ_INIT(&be->conns);
+    if(reverse[0] != '\0') {
+        be =
+            vhost != NULL ? &s_vhost_backends[s_num_vhost_backends++]
+            : &s_default_backends[s_num_default_backends++];
+        STAILQ_INIT(&be->conns);
 
-    be->vhost = vhost;
-    be->uri_prefix = "/";
-    be->host_port = reverse;
-    be->redirect = 0;
-    be->uri_prefix_replacement = be->uri_prefix;
+        be->vhost = vhost;
+        be->uri_prefix = "/";
+        be->host_port = reverse;
+        be->redirect = 0;
+        be->uri_prefix_replacement = be->uri_prefix;
 
-    /* if ((r = strchr(be->uri_prefix, '=')) != NULL) {
-     *r = '\0';
-     be->uri_prefix_replacement = r + 1;
-     } */
+        /* if ((r = strchr(be->uri_prefix, '=')) != NULL) {
+         *r = '\0';
+         be->uri_prefix_replacement = r + 1;
+         } */
 
-    printf(
-            "Adding backend for %s%s : %s "
-            "[redirect=%d,prefix_replacement=%s]\n",
-            be->vhost == NULL ? "" : be->vhost, be->uri_prefix, be->host_port,
-            be->redirect, be->uri_prefix_replacement);
+        printf(
+                "Adding backend for %s%s : %s "
+                "[redirect=%d,prefix_replacement=%s]\n",
+                be->vhost == NULL ? "" : be->vhost, be->uri_prefix, be->host_port,
+                be->redirect, be->uri_prefix_replacement);
+
+    }
 
     init_req_mgr(&sreq_mgr);
 
@@ -1321,7 +1324,7 @@ int main(int argc, char *argv[]) {
     }
 #endif
 
-    if (s_num_vhost_backends + s_num_default_backends == 0) {
+    /* if (s_num_vhost_backends + s_num_default_backends == 0) {
         fprintf(stderr,  "not http or https found\n");
         print_usage_and_exit(argv[0]);
     }
@@ -1329,7 +1332,7 @@ int main(int argc, char *argv[]) {
     if(NULL == nc_http && NULL == nc_https) {
         fprintf(stderr,  "not http or https found\n");
         exit(1);
-    }
+    } */
 
     if(nc_http != NULL) {
         mg_set_protocol_http_websocket(nc_http);
@@ -1343,7 +1346,7 @@ int main(int argc, char *argv[]) {
     signal(SIGTERM, signal_handler);
 
     /* Run event loop until signal is received */
-    printf("Starting http on port %s\nhttps on port %s \nwww=%s\n upload path=/tmp/upload\n", http_port, https_port, www);
+    printf("Starting http on port %s\nhttps on port %s \nwww=%s\nupload path=/tmp/upload\n", http_port, https_port, www);
     while (s_sig_num == 0) {
         mg_mgr_poll(&mgr, 1000);
     }
