@@ -19,10 +19,8 @@
 
 #define PREFIX_API "/_api/"
 #define PREFIX_API_LEN (6)
-#define PREFIX_ROOT1 "/cgi-bin/luci/admin/softcenter/"
-#define PREFIX_ROOT_LEN1 (31)
-#define PREFIX_ROOT2 "/cgi-bin/luci//admin/softcenter/"
-#define PREFIX_ROOT_LEN2 (32)
+#define PREFIX_ROOT "/_root/"
+#define PREFIX_ROOT_LEN (7)
 #define PREFIX_TEMP "/_temp/"
 #define PREFIX_TEMP_LEN (7)
 #define PREFIX_RESP "/_resp/"
@@ -992,19 +990,10 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data, int http
                     }
 
                     break;
-                } else if(hm != NULL && mg_has_prefix(&hm->uri, PREFIX_ROOT1)) {
+                } else if(hm != NULL && mg_has_prefix(&hm->uri, PREFIX_ROOT)) {
                     //rewrite uri
-                    hm->uri.p += PREFIX_ROOT_LEN1-1;
-                    hm->uri.len -= PREFIX_ROOT_LEN1-1;
-                    mg_serve_http(nc, hm, s_http_server_opts); /* Serve static content */
-
-                    nc->flags |= MG_F_SEND_AND_CLOSE;
-                    conn->client.nc = NULL;
-                    break;
-                } else if(hm != NULL && mg_has_prefix(&hm->uri, PREFIX_ROOT2)) {
-                    //rewrite uri
-                    hm->uri.p += PREFIX_ROOT_LEN2-1;
-                    hm->uri.len -= PREFIX_ROOT_LEN2-1;
+                    hm->uri.p += PREFIX_ROOT_LEN-1;
+                    hm->uri.len -= PREFIX_ROOT_LEN-1;
                     mg_serve_http(nc, hm, s_http_server_opts); /* Serve static content */
 
                     nc->flags |= MG_F_SEND_AND_CLOSE;
